@@ -165,6 +165,7 @@ boolean Adafruit_VL53L0X::begin(uint8_t i2c_addr, boolean debug, TwoWire *i2c) {
   if( Status == VL53L0X_ERROR_NONE ) {
       Status = VL53L0X_SetLimitCheckValue( pMyDevice, VL53L0X_CHECKENABLE_RANGE_IGNORE_THRESHOLD, (FixPoint1616_t)( 1.5 * 0.023 * 65536 ) );
   }
+  useContinuous = false;
 
   if( Status == VL53L0X_ERROR_NONE ) {
       return true;
@@ -197,6 +198,86 @@ boolean Adafruit_VL53L0X::setAddress(uint8_t newAddr) {
     return true;
   }
   return false;
+}
+
+boolean Adafruit_VL53L0X::setContinuous(VL53L0X_DeviceModes DeviceMode){
+    useContinuous = true;
+    Status = VL53L0X_SetDeviceMode(pMyDevice, DeviceMode);
+    if( Status == VL53L0X_ERROR_NONE ) {
+        if(startMeasurement()){
+            return true;
+        }
+    }
+    return false;        
+}
+
+boolean Adafruit_VL53L0X::setInterrupt(int min, int max, VL53L0X_DeviceModes DeviceMode, VL53L0X_GpioFunctionality Functionality, VL53L0X_InterruptPolarity Polarity){
+    
+    if(!setGpioConfig(DeviceMode, Functionality, Polarity)){
+        return false;
+    }
+
+    if(DeviceMode == VL53L0X_DEVICEMODE_CONTINUOUS_RANGING || DeviceMode == VL53L0X_DEVICEMODE_CONTINUOUS_TIMED_RANGING){
+        FixPoint1616_t minThreashHold = (min * 65536.0);
+        FixPoint1616_t maxThreashHold = (max * 65536.0);
+        if(!setInterruptThresholds(minThreashHold, maxThreashHold, DeviceMode)){
+            return false;
+        }
+        if(setContinuous(DeviceMode)){
+            return true;
+        }
+    }
+    return false;
+}
+
+boolean Adafruit_VL53L0X::clearInterruptMask(){
+    Status = VL53L0X_ClearInterruptMask(pMyDevice, 0);
+    if( Status == VL53L0X_ERROR_NONE ) {
+      return true;
+    }
+    return false; 
+}
+
+boolean Adafruit_VL53L0X::startMeasurement(){
+    Status = VL53L0X_StartMeasurement(pMyDevice);
+    if( Status == VL53L0X_ERROR_NONE ) {
+      return true;
+    }
+    return false; 
+}
+
+boolean Adafruit_VL53L0X::setInterruptThresholds(FixPoint1616_t ThresholdLow,
+	FixPoint1616_t ThresholdHigh, VL53L0X_DeviceModes DeviceMode){
+    Status = VL53L0X_SetInterruptThresholds(pMyDevice, DeviceMode, ThresholdLow, ThresholdHigh);
+    if( Status == VL53L0X_ERROR_NONE ) {
+      return true;
+    }
+    return false;  
+}
+
+boolean Adafruit_VL53L0X::setGpioConfig(VL53L0X_DeviceModes DeviceMode, VL53L0X_GpioFunctionality Functionality, VL53L0X_InterruptPolarity Polarity){
+	    Status = VL53L0X_SetGpioConfig(pMyDevice, 0, DeviceMode, Functionality, Polarity);
+        if( Status == VL53L0X_ERROR_NONE ) {
+            return true;
+        }
+	
+	    return false ;
+}
+
+int Adafruit_VL53L0X::getMeasurementResult(){
+    int result = -1;
+    VL53L0X_RangingMeasurementData_t measure;
+    if(useContinuous){
+        getContinuousRangingMeasurement(&measure);
+    }else{
+        getSingleRangingMeasurement(&measure);
+    }
+
+    if (measure.RangeStatus != 4) {
+        result = measure.RangeMilliMeter;
+    }
+
+    return result;
 }
 
 /**************************************************************************/
@@ -241,6 +322,18 @@ VL53L0X_Error Adafruit_VL53L0X::getSingleRangingMeasurement( VL53L0X_RangingMeas
     return Status;
 }
 
+VL53L0X_Error Adafruit_VL53L0X::getContinuousRangingMeasurement(VL53L0X_RangingMeasurementData_t* pRangingMeasurementData){
+    VL53L0X_Error   Status = VL53L0X_ERROR_NONE;
+    uint8_t pMeasurementDataReady;
+    Status = VL53L0X_GetMeasurementDataReady(pMyDevice, &pMeasurementDataReady);
+    if (Status == VL53L0X_ERROR_NONE && pMeasurementDataReady == 0x01){
+        Status = VL53L0X_GetRangingMeasurementData(pMyDevice, pRangingMeasurementData);
+        if (Status == VL53L0X_ERROR_NONE){
+            Status = VL53L0X_ClearInterruptMask(pMyDevice, 0);
+        }
+    }
+    return Status;
+}
 
 
 /**************************************************************************/

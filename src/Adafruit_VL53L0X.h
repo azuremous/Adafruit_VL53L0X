@@ -40,6 +40,10 @@ class Adafruit_VL53L0X
   public:
     boolean       begin(uint8_t i2c_addr = VL53L0X_I2C_ADDR, boolean debug = false, TwoWire *i2c = &Wire);
     boolean       setAddress(uint8_t newAddr);
+    boolean setContinuous(VL53L0X_DeviceModes DeviceMode = VL53L0X_DEVICEMODE_CONTINUOUS_RANGING);
+    boolean setInterrupt(int min, int max, VL53L0X_DeviceModes DeviceMode = VL53L0X_DEVICEMODE_CONTINUOUS_RANGING, VL53L0X_GpioFunctionality Functionality = VL53L0X_GPIOFUNCTIONALITY_THRESHOLD_CROSSED_LOW, VL53L0X_InterruptPolarity Polarity = VL53L0X_INTERRUPTPOLARITY_LOW);
+    boolean clearInterruptMask();
+    int getMeasurementResult();
 
     /**************************************************************************/
     /*! 
@@ -55,16 +59,23 @@ class Adafruit_VL53L0X
     { return getSingleRangingMeasurement(pRangingMeasurementData, debug); };
 
     VL53L0X_Error getSingleRangingMeasurement( VL53L0X_RangingMeasurementData_t* pRangingMeasurementData, boolean debug = false );
+    VL53L0X_Error getContinuousRangingMeasurement(VL53L0X_RangingMeasurementData_t* pRangingMeasurementData);
     void          printRangeStatus( VL53L0X_RangingMeasurementData_t* pRangingMeasurementData );
 
     VL53L0X_Error                     Status      = VL53L0X_ERROR_NONE; ///< indicates whether or not the sensor has encountered an error
-
+ 
+ protected:
+  boolean startMeasurement();
+  boolean setInterruptThresholds(FixPoint1616_t ThresholdLow, FixPoint1616_t ThresholdHigh, VL53L0X_DeviceModes DeviceMode);
+  boolean setGpioConfig(VL53L0X_DeviceModes DeviceMode, VL53L0X_GpioFunctionality Functionality, VL53L0X_InterruptPolarity Polarity);
+   
  private:
   VL53L0X_Dev_t                       MyDevice;
   VL53L0X_Dev_t                       *pMyDevice  = &MyDevice;
   VL53L0X_Version_t                   Version;
   VL53L0X_Version_t                   *pVersion   = &Version;
   VL53L0X_DeviceInfo_t                DeviceInfo;
+  bool useContinuous;
 };
 
 #endif
