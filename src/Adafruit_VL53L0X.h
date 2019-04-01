@@ -35,15 +35,23 @@
     @brief  Class that stores state and functions for interacting with VL53L0X time-of-flight sensor chips
 */
 /**************************************************************************/
+typedef enum{
+  HIGH_ACCURACY_MODE,
+  HIGH_SPEED_MODE,
+  LONG_RANGE_MODE
+}RANGE_MODE;
+
 class Adafruit_VL53L0X
 {
   public:
     boolean       begin(uint8_t i2c_addr = VL53L0X_I2C_ADDR, boolean debug = false, TwoWire *i2c = &Wire);
     boolean       setAddress(uint8_t newAddr);
+    void setMode(RANGE_MODE mode);
     boolean setContinuous(VL53L0X_DeviceModes DeviceMode = VL53L0X_DEVICEMODE_CONTINUOUS_RANGING);
     boolean setInterrupt(int min, int max, VL53L0X_DeviceModes DeviceMode = VL53L0X_DEVICEMODE_CONTINUOUS_RANGING, VL53L0X_GpioFunctionality Functionality = VL53L0X_GPIOFUNCTIONALITY_THRESHOLD_CROSSED_LOW, VL53L0X_InterruptPolarity Polarity = VL53L0X_INTERRUPTPOLARITY_LOW);
     boolean clearInterruptMask();
     int getMeasurementResult();
+    int getContinuousMeasurementResult();
 
     /**************************************************************************/
     /*! 
@@ -65,6 +73,7 @@ class Adafruit_VL53L0X
     VL53L0X_Error                     Status      = VL53L0X_ERROR_NONE; ///< indicates whether or not the sensor has encountered an error
  
  protected:
+  int getRangeMilliMeter(const VL53L0X_RangingMeasurementData_t &measure);
   boolean startMeasurement();
   boolean setInterruptThresholds(FixPoint1616_t ThresholdLow, FixPoint1616_t ThresholdHigh, VL53L0X_DeviceModes DeviceMode);
   boolean setGpioConfig(VL53L0X_DeviceModes DeviceMode, VL53L0X_GpioFunctionality Functionality, VL53L0X_InterruptPolarity Polarity);

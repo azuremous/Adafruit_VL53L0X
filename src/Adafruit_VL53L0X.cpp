@@ -200,6 +200,38 @@ boolean Adafruit_VL53L0X::setAddress(uint8_t newAddr) {
   return false;
 }
 
+void Adafruit_VL53L0X::setMode(RANGE_MODE mode){
+    switch (mode){
+        case HIGH_ACCURACY_MODE:{
+            if (Status == VL53L0X_ERROR_NONE) {
+                Status = VL53L0X_SetLimitCheckValue(pMyDevice, VL53L0X_CHECKENABLE_SIGNAL_RATE_FINAL_RANGE, (FixPoint1616_t)(0.25*65536));
+            }
+            if (Status == VL53L0X_ERROR_NONE) {
+                Status = VL53L0X_SetLimitCheckValue(pMyDevice, VL53L0X_CHECKENABLE_SIGMA_FINAL_RANGE, (FixPoint1616_t)(18*65536));
+            }
+            if (Status == VL53L0X_ERROR_NONE) {
+                Status = VL53L0X_SetMeasurementTimingBudgetMicroSeconds(pMyDevice, 200000);
+            }
+        }break;
+
+        case HIGH_SPEED_MODE:{
+            if (Status == VL53L0X_ERROR_NONE) {
+                Status = VL53L0X_SetLimitCheckValue(pMyDevice, VL53L0X_CHECKENABLE_SIGNAL_RATE_FINAL_RANGE, (FixPoint1616_t)(0.25*65536));
+            }
+            if (Status == VL53L0X_ERROR_NONE) {
+                Status = VL53L0X_SetLimitCheckValue(pMyDevice, VL53L0X_CHECKENABLE_SIGMA_FINAL_RANGE, (FixPoint1616_t)(32*65536));
+            }
+            if (Status == VL53L0X_ERROR_NONE) {
+                Status = VL53L0X_SetMeasurementTimingBudgetMicroSeconds(pMyDevice, 20000);
+            }
+        }break;
+
+        case LONG_RANGE_MODE:{
+
+        }break;
+    }
+}
+
 boolean Adafruit_VL53L0X::setContinuous(VL53L0X_DeviceModes DeviceMode){
     useContinuous = true;
     Status = VL53L0X_SetDeviceMode(pMyDevice, DeviceMode);
@@ -265,19 +297,24 @@ boolean Adafruit_VL53L0X::setGpioConfig(VL53L0X_DeviceModes DeviceMode, VL53L0X_
 }
 
 int Adafruit_VL53L0X::getMeasurementResult(){
-    int result = -1;
     VL53L0X_RangingMeasurementData_t measure;
-    if(useContinuous){
-        getContinuousRangingMeasurement(&measure);
-    }else{
-        getSingleRangingMeasurement(&measure);
-    }
+    if(useContinuous){ getContinuousRangingMeasurement(&measure); }
+    else{ getSingleRangingMeasurement(&measure); }
+    return getRangeMilliMeter(measure);
+}
 
+int Adafruit_VL53L0X::getContinuousMeasurementResult(){
+    VL53L0X_RangingMeasurementData_t measure;
+    Status = VL53L0X_GetRangingMeasurementData(pMyDevice, &measure);
+    if (Status == VL53L0X_ERROR_NONE){ return getRangeMilliMeter(measure); }
+    return -1;
+}
+
+int Adafruit_VL53L0X::getRangeMilliMeter(const VL53L0X_RangingMeasurementData_t &measure){
     if (measure.RangeStatus != 4) {
-        result = measure.RangeMilliMeter;
+        return measure.RangeMilliMeter;
     }
-
-    return result;
+    return -1;
 }
 
 /**************************************************************************/
